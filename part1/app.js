@@ -113,7 +113,7 @@ let db;
         ('Rocky', 'large', (SELECT user_id FROM Users WHERE username = 'emily123')),
         ('Buddy', 'small', (SELECT user_id FROM Users WHERE username = 'alice123')),
         ('Cooper', 'medium', (SELECT user_id FROM Users WHERE username = 'carol123'))
-      `);
+     �
 
       await db.query(`
         INSERT INTO WalkRequests (dog_id, requested_time, duration_minutes, location, status)
@@ -122,13 +122,20 @@ let db;
         ((SELECT dog_id FROM Dogs WHERE name = 'Bella' AND owner_id = (SELECT user_id FROM Users WHERE username = 'carol123')), '2025-06-10 09:30:00', 45, 'Beachside Ave', 'accepted'),
         ((SELECT dog_id FROM Dogs WHERE name = 'Rocky' AND owner_id = (SELECT user_id FROM Users WHERE username = 'emily123')), '2025-06-11 07:15:00', 60, 'Riverwalk Trail', 'open'),
         ((SELECT dog_id FROM Dogs WHERE name = 'Buddy' AND owner_id = (SELECT user_id FROM Users WHERE username = 'alice123')), '2025-06-11 10:00:00', 20, 'Central Park', 'completed'),
-        ((SELECT dog_id FROM Dogs WHERE name = 'Cooper' AND owner_id = (SELECT user_id FROM Users WHERE username = 'carol123')), '2025-06-12 16:30:00', 40, 'Greenfield Gardens', 'cancelled')
+        ((SELECT dog_id FROM Dogs WHERE name = 'Cooper' AND owner_id = (SELECT user_id FROM Users WHERE username = 'carol123')), '2025-06-12 16:30:00', 40, 'Greenfield Gardens', 'cancelled'),
+        ((SELECT dog_id FROM Dogs WHERE name = 'Max' AND owner_id = (SELECT user_id FROM Users WHERE username = 'alice123')), '2025-06-13 09:00:00', 30, 'City Park', 'completed')
       `);
 
       await db.query(`
         INSERT INTO WalkApplications (request_id, walker_id, status)
-        VALUES (
+        VALUES
+        (
           (SELECT request_id FROM WalkRequests WHERE status = 'completed' AND dog_id = (SELECT dog_id FROM Dogs WHERE name = 'Buddy') LIMIT 1),
+          (SELECT user_id FROM Users WHERE username = 'bobwalker'),
+          'accepted'
+        ),
+        (
+          (SELECT request_id FROM WalkRequests WHERE status = 'completed' AND dog_id = (SELECT dog_id FROM Dogs WHERE name = 'Max') LIMIT 1),
           (SELECT user_id FROM Users WHERE username = 'bobwalker'),
           'accepted'
         )
@@ -136,12 +143,20 @@ let db;
 
       await db.query(`
         INSERT INTO WalkRatings (request_id, walker_id, owner_id, rating, comments)
-        VALUES (
+        VALUES
+        (
           (SELECT request_id FROM WalkRequests WHERE status = 'completed' AND dog_id = (SELECT dog_id FROM Dogs WHERE name = 'Buddy') LIMIT 1),
           (SELECT user_id FROM Users WHERE username = 'bobwalker'),
           (SELECT user_id FROM Users WHERE username = 'alice123'),
           5,
           'Great walk, very punctual!'
+        ),
+        (
+          (SELECT request_id FROM WalkRequests WHERE status = 'completed' AND dog_id = (SELECT dog_id FROM Dogs WHERE name = 'Max') LIMIT 1),
+          (SELECT user_id FROM Users WHERE username = 'bobwalker'),
+          (SELECT user_id FROM Users WHERE username = 'alice123'),
+          4,
+          'Good job, but a bit rushed.'
         )
       `);
     }
@@ -180,28 +195,27 @@ let db;
       }
     });
 
-   app.get('/api/walkers/summary', async (req, res) => {
-  try {
-    const [summary] = await db.query(`
-      SELECT
-        u.username AS walker_username,
-        COUNT(DISTINCT wr.rating_id) AS total_ratings,
-        ROUND(AVG(wr.rating), 1) AS average_rating,
-        COUNT(DISTINCT CASE WHEN wa.status = 'accepted' AND r.status = 'completed' THEN wa.request_id END) AS completed_walks
-      FROM Users u
-      LEFT JOIN WalkRatings wr ON wr.walker_id = u.user_id
-      LEFT JOIN WalkApplications wa ON wa.walker_id = u.user_id
-      LEFT JOIN WalkRequests r ON wa.request_id = r.request_id
-      WHERE u.role = 'walker'
-      GROUP BY u.user_id
-    `);
-    res.json(summary);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to fetch walker summary' });
-  }
-});
-
+    app.get('/api/walkers/summary', async (req, res) => {
+      try {
+        const [summary] = await db.query(`
+          SELECT
+            u.username AS walker_username,
+            COUNT(DISTINCT wr.rating_id) AS total_ratings,
+            ROUND(AVG(wr.rating), 1) AS average_rating,
+            COUNT(DISTINCT CASE WHEN wa.status = 'accepted' AND r.status = 'completed' THEN wa.request_id END) AS completed_walks
+          FROM Users u
+          LEFT JOIN WalkRatings wr ON wr.walker_id = u.user_id
+          LEFT JOIN WalkApplications wa ON wa.walker_id = u.user_id
+          LEFT JOIN WalkRequests r ON wa.request_id = r.request_id
+          WHERE u.role = 'walker'
+          GROUP BY u.user_id
+        `);
+        res.json(summary);
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch walker summary' });
+      }
+    });
 
   } catch (err) {
     console.error('Database setup error:', err);
