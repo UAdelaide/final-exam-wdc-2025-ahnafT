@@ -31,11 +31,11 @@ button {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  padding: 15px 25px;
+  padding: 8px 15px;
   background-color: #ffc0cb;
   color: #e48ca2;
-  font-size: 1.1em;
-  border-radius: 25px;
+  font-size: 0.9em;
+  border-radius: 15px;
   border: none;
   cursor: crosshair;
   font-family: 'Papyrus', fantasy;
