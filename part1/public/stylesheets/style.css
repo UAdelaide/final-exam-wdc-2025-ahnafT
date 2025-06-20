@@ -16,6 +16,8 @@ body {
 .label {
   font-size: 1.2em;
   color: limegreen;
+  font-style: italic;
+  letter-spacing: 3px;
 }
 
 button {
@@ -26,4 +28,5 @@ button {
   border-radius: 25px;
   border: none;
   cursor: crosshair;
+  font-family: 'Papyrus', fantasy;
 }
