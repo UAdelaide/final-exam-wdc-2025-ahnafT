@@ -1,12 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Express</title>
-    <link rel="stylesheet" href="/stylesheets/style.css">
+  <meta charset="UTF-8" />
+  <title>Dog of the Day</title>
+  <script src="https://unpkg.com/vue@3"></script>
+  <link rel="stylesheet" href="/styles.css" />
 </head>
-
 <body>
-    <h1>Express</h1>
-    <p>Welcome to Express</p>
+  <div id="app">
+    <h1>Click the Button Maybe!</h1>
+    <div class="dog-card">
+      <p class="label">Random good boy/girl/they</p>
+      <img :src="dogImage" />
+    </div>
+    <button @click="fetchDog">You Might Wanna Click Me!</button>
+  </div>
+
+  <script>
+    const { createApp } = Vue;
+
+    createApp({
+      data() {
+        return {
+          dogImage: ""
+        };
+      },
+      mounted() {
+        this.fetchDog();
+      },
+      methods: {
+        fetchDog() {
+          fetch("https://dog.ceo/api/breeds/image/random")
+            .then(response => response.json())
+            .then(data => {
+              this.dogImage = data.message;
+            });
+        }
+      }
+    }).mount("#app");
+  </script>
 </body>
 </html>
