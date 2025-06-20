@@ -94,21 +94,18 @@ let db;
       )
     `);
 
-    // Clear existing data to ensure clean insertion
     await db.execute('DELETE FROM WalkRatings');
     await db.execute('DELETE FROM WalkApplications');
     await db.execute('DELETE FROM WalkRequests');
     await db.execute('DELETE FROM Dogs');
     await db.execute('DELETE FROM Users');
 
-    // Reset AUTO_INCREMENT counters
     await db.execute('ALTER TABLE Users AUTO_INCREMENT = 1');
     await db.execute('ALTER TABLE Dogs AUTO_INCREMENT = 1');
     await db.execute('ALTER TABLE WalkRequests AUTO_INCREMENT = 1');
     await db.execute('ALTER TABLE WalkApplications AUTO_INCREMENT = 1');
     await db.execute('ALTER TABLE WalkRatings AUTO_INCREMENT = 1');
 
-    // Insert Users
     await db.query(`
       INSERT INTO Users (username, email, password_hash, role) VALUES
       ('alice123', 'alice@example.com', 'hashed123', 'owner'),
@@ -118,7 +115,6 @@ let db;
       ('emily123', 'emily@example.com', 'hashed321', 'owner')
     `);
 
-    // Insert Dogs
     await db.query(`
       INSERT INTO Dogs (name, size, owner_id)
       VALUES
@@ -129,7 +125,6 @@ let db;
       ('Cooper', 'medium', (SELECT user_id FROM Users WHERE username = 'carol123'))
     `);
 
-    // Insert WalkRequests
     await db.query(`
       INSERT INTO WalkRequests (dog_id, requested_time, duration_minutes, location, status)
       VALUES
@@ -141,7 +136,6 @@ let db;
       ((SELECT dog_id FROM Dogs WHERE name = 'Max' AND owner_id = (SELECT user_id FROM Users WHERE username = 'alice123')), '2025-06-13 09:00:00', 30, 'City Park', 'completed')
     `);
 
-    // Insert WalkApplications
     await db.query(`
       INSERT INTO WalkApplications (request_id, walker_id, status)
       VALUES
