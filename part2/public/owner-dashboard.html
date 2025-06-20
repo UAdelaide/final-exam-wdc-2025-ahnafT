@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <title>Owner Dashboard - Dog Walking Service</title>
@@ -8,7 +7,6 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 </head>
-
 <body class="bg-light">
   <div id="app" class="container py-4">
     <h1 class="mb-4 text-primary">Owner Dashboard</h1>
@@ -67,50 +65,71 @@
   </div>
 
   <script>
-    const { createApp } = Vue;
+    const { createApp, ref, onMounted } = Vue;
+
     createApp({
-      data() {
-        return {
-          message: 'Welcome to the Dog Walking Service!',
-          email: '',
-          password: ''
-        };
-      },
-      methods: {
-        login() {
-          const user = {
-            email: this.email,
-            password: this.password
-          };
+      setup() {
+        const form = ref({
+          dog_id: '',
+          requested_time: '',
+          duration_minutes: '',
+          location: ''
+        });
 
-          const xmlhttp = new XMLHttpRequest();
-          xmlhttp.onreadystatechange = () => {
-            if (xmlhttp.readyState === 4) {
-              if (xmlhttp.status === 200) {
-                const response = JSON.parse(xmlhttp.responseText);
-                if (response.role === 'owner') {
-                  window.location.href = 'owner-dashboard.html';
-                } else if (response.role === 'walker') {
-                  window.location.href = 'walker-dashboard.html';
-                } else {
-                  alert('Unknown role');
-                }
-              } else {
-                alert('Login failed');
-              }
-            }
-          };
+        const walks = ref([]);
+        const message = ref('');
+        const error = ref('');
 
-          xmlhttp.open('POST', '/api/users/login', true);
-          xmlhttp.setRequestHeader('Content-Type', 'application/json');
-          xmlhttp.send(JSON.stringify(user));
+        async function loadWalks() {
+          try {
+            const res = await fetch('/api/walks');
+            walks.value = await res.json();
+          } catch (err) {
+            error.value = 'Failed to load walk requests';
+          }
         }
+
+        async function submitWalkRequest() {
+          try {
+            const res = await fetch('/api/walks', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(form.value)
+            });
+            const result = await res.json();
+
+            if (!res.ok) throw new Error(result.error || 'Error submitting walk request');
+
+            message.value = result.message;
+            error.value = '';
+            form.value = {
+              dog_id: '',
+              requested_time: '',
+              duration_minutes: '',
+              location: ''
+            };
+            loadWalks();
+          } catch (err) {
+            error.value = err.message;
+            message.value = '';
+          }
+        }
+
+        onMounted(() => {
+          loadWalks();
+        });
+
+        return {
+          form,
+          walks,
+          message,
+          error,
+          submitWalkRequest
+        };
       }
     }).mount('#app');
   </script>
 
-
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-
 </html>
