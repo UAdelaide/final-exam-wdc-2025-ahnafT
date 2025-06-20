@@ -125,6 +125,28 @@ let db;
         ((SELECT dog_id FROM Dogs WHERE name = 'Cooper' AND owner_id = (SELECT user_id FROM Users WHERE username = 'carol123')), '2025-06-12 16:30:00', 40, 'Greenfield Gardens', 'cancelled')
       `);
 
+            // Insert WalkApplications
+            await db.query(`
+  INSERT INTO WalkApplications (request_id, walker_id, status)
+  VALUES
+  (
+    (SELECT request_id FROM WalkRequests WHERE dog_id = (SELECT dog_id FROM Dogs WHERE name = 'Max') AND status = 'open' LIMIT 1),
+    (SELECT user_id FROM Users WHERE username = 'bobwalker'),
+    'accepted'
+  ),
+  (
+    (SELECT request_id FROM WalkRequests WHERE dog_id = (SELECT dog_id FROM Dogs WHERE name = 'Rocky') AND status = 'open' LIMIT 1),
+    (SELECT user_id FROM Users WHERE username = 'davidwalker'),
+    'pending'
+  ),
+  (
+    (SELECT request_id FROM WalkRequests WHERE dog_id = (SELECT dog_id FROM Dogs WHERE name = 'Buddy') AND status = 'completed' LIMIT 1),
+    (SELECT user_id FROM Users WHERE username = 'bobwalker'),
+    'accepted'
+  )
+`);
+
+            // Insert WalkRatings
             await db.query(`
   INSERT INTO WalkRatings (request_id, walker_id, owner_id, rating, comments)
   VALUES
@@ -143,6 +165,7 @@ let db;
     'Good walk, friendly walker.'
   )
 `);
+
         }
 
 
