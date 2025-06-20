@@ -11,20 +11,10 @@
 
   <div id="app" class="container py-5">
     <h1 class="mb-4 text-primary">{{ message }}</h1>
-       <div class="card p-4 mb-4" style="max-width: 400px;">
-      <h3 class="mb-3">Login</h3>
-      <form id="loginForm" @submit.prevent="login">
-        <div class="mb-3">
-          <label for="username" class="form-label">Username</label>
-          <input type="text" id="username" v-model="username" class="form-control" required />
-        </div>
-        <div class="mb-3">
-          <label for="password" class="form-label">Password</label>
-          <input type="password" id="password" v-model="password" class="form-control" required />
-        </div>
-        <button type="submit" class="btn btn-primary w-100">Login</button>
-      </form>
-    </div>
+    <p class="lead">Connect with trusted walkers for your beloved dog!</p>
+
+    <a href="owner-dashboard.html" class="btn btn-outline-primary me-2">Owner Dashboard</a>
+    <a href="walker-dashboard.html" class="btn btn-outline-success">Walker Dashboard</a>
   </div>
 
   <script>
