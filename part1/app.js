@@ -94,9 +94,9 @@ let db;
       )
     `);
 
-    // Seed data only if no users exist
     const [users] = await db.query('SELECT COUNT(*) AS count FROM Users');
     if (users[0].count === 0) {
+      // Seed data
       await db.query(`
         INSERT INTO Users (username, email, password_hash, role) VALUES
         ('alice123', 'alice@example.com', 'hashed123', 'owner'),
@@ -107,8 +107,7 @@ let db;
       `);
 
       await db.query(`
-        INSERT INTO Dogs (name, size, owner_id)
-        VALUES
+        INSERT INTO Dogs (name, size, owner_id) VALUES
         ('Max', 'medium', (SELECT user_id FROM Users WHERE username = 'alice123')),
         ('Bella', 'small', (SELECT user_id FROM Users WHERE username = 'carol123')),
         ('Rocky', 'large', (SELECT user_id FROM Users WHERE username = 'emily123')),
@@ -117,8 +116,7 @@ let db;
       `);
 
       await db.query(`
-        INSERT INTO WalkRequests (dog_id, requested_time, duration_minutes, location, status)
-        VALUES
+        INSERT INTO WalkRequests (dog_id, requested_time, duration_minutes, location, status) VALUES
         ((SELECT dog_id FROM Dogs WHERE name = 'Max' AND owner_id = (SELECT user_id FROM Users WHERE username = 'alice123')), '2025-06-10 08:00:00', 30, 'Parklands', 'open'),
         ((SELECT dog_id FROM Dogs WHERE name = 'Bella' AND owner_id = (SELECT user_id FROM Users WHERE username = 'carol123')), '2025-06-10 09:30:00', 45, 'Beachside Ave', 'accepted'),
         ((SELECT dog_id FROM Dogs WHERE name = 'Rocky' AND owner_id = (SELECT user_id FROM Users WHERE username = 'emily123')), '2025-06-11 07:15:00', 60, 'Riverwalk Trail', 'open'),
@@ -127,8 +125,22 @@ let db;
       `);
 
       await db.query(`
-        INSERT INTO WalkRatings (request_id, walker_id, owner_id, rating, comments)
-        VALUES (
+        INSERT INTO WalkApplications (request_id, walker_id, status) VALUES
+        (
+          (SELECT request_id FROM WalkRequests WHERE status = 'accepted' AND dog_id = (SELECT dog_id FROM Dogs WHERE name = 'Bella') LIMIT 1),
+          (SELECT user_id FROM Users WHERE username = 'davidwalker'),
+          'accepted'
+        ),
+        (
+          (SELECT request_id FROM WalkRequests WHERE status = 'completed' AND dog_id = (SELECT dog_id FROM Dogs WHERE name = 'Buddy') LIMIT 1),
+          (SELECT user_id FROM Users WHERE username = 'bobwalker'),
+          'accepted'
+        )
+      `);
+
+      await db.query(`
+        INSERT INTO WalkRatings (request_id, walker_id, owner_id, rating, comments) VALUES
+        (
           (SELECT request_id FROM WalkRequests WHERE status = 'completed' AND dog_id = (SELECT dog_id FROM Dogs WHERE name = 'Buddy') LIMIT 1),
           (SELECT user_id FROM Users WHERE username = 'bobwalker' LIMIT 1),
           (SELECT user_id FROM Users WHERE username = 'alice123' LIMIT 1),
@@ -138,7 +150,7 @@ let db;
       `);
     }
 
-    // GET /api/dogs
+    // API routes
     app.get('/api/dogs', async (req, res) => {
       try {
         const [dogs] = await db.query(`
@@ -152,7 +164,6 @@ let db;
       }
     });
 
-    // GET /api/walkrequests/open
     app.get('/api/walkrequests/open', async (req, res) => {
       try {
         const [requests] = await db.query(`
@@ -174,7 +185,6 @@ let db;
       }
     });
 
-    // GET /api/walkers/summary - only for completed walks
     app.get('/api/walkers/summary', async (req, res) => {
       try {
         const [summary] = await db.query(`
@@ -193,8 +203,9 @@ let db;
           FROM Users u
           LEFT JOIN WalkRatings wr
             ON wr.walker_id = u.user_id
-          LEFT JOIN WalkRequests r
-            ON wr.request_id = r.request_id AND r.status = 'completed'
+            AND wr.request_id IN (
+              SELECT request_id FROM WalkRequests WHERE status = 'completed'
+            )
           WHERE u.role = 'walker'
           GROUP BY u.user_id
         `);
@@ -210,5 +221,4 @@ let db;
 })();
 
 app.use(express.static(path.join(__dirname, 'public')));
-
 module.exports = app;
