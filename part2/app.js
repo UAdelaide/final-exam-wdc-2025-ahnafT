@@ -25,6 +25,23 @@ app.use('/api/users', userRoutes);
 
 let db;
 
+// dog details route
+app.get('/api/dogs', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: 'Database not initialized' });
+    }
+    const [dogs] = await db.query(`
+      SELECT Dogs.dog_id, Dogs.name, Dogs.size, Dogs.owner_id
+      FROM Dogs
+    `);
+    res.json(dogs);
+  } catch (err) {
+    console.error('Error fetching dogs:', err);
+    res.status(500).json({ error: 'Failed to fetch dogs' });
+  }
+});
+
 (async () => {
   try {
     // Connect to DB
@@ -34,21 +51,7 @@ let db;
       password: '',
       database: 'DogWalkService'
     });
-
-    // dog details route
-    app.get('/api/dogs', async (req, res) => {
-      try {
-        const [dogs] = await db.query(`
-          SELECT Dogs.dog_id, Dogs.name, Dogs.size, Dogs.owner_id
-          FROM Dogs
-        `);
-        res.json(dogs);
-      } catch (err) {
-        console.error('Error fetching dogs:', err);
-        res.status(500).json({ error: 'Failed to fetch dogs' });
-      }
-    });
-
+    console.log('Database connected');
   } catch (err) {
     console.error('Database connection error:', err);
   }
