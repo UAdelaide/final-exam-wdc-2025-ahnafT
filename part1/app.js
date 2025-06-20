@@ -15,7 +15,6 @@ let db;
 
 (async () => {
   try {
-    // Connect without DB first to create DB if needed
     const connection = await mysql.createConnection({
       host: 'localhost',
       user: 'root',
@@ -25,7 +24,6 @@ let db;
     await connection.query('CREATE DATABASE IF NOT EXISTS DogWalkService');
     await connection.end();
 
-    // Connect to DogWalkService DB
     db = await mysql.createConnection({
       host: 'localhost',
       user: 'root',
@@ -33,7 +31,7 @@ let db;
       database: 'DogWalkService'
     });
 
-    // Create tables if not exists
+    // Create tables
     await db.execute(`
       CREATE TABLE IF NOT EXISTS Users (
         user_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -69,19 +67,6 @@ let db;
     `);
 
     await db.execute(`
-      CREATE TABLE IF NOT EXISTS WalkApplications (
-        application_id INT AUTO_INCREMENT PRIMARY KEY,
-        request_id INT NOT NULL,
-        walker_id INT NOT NULL,
-        applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
-        FOREIGN KEY (request_id) REFERENCES WalkRequests(request_id),
-        FOREIGN KEY (walker_id) REFERENCES Users(user_id),
-        CONSTRAINT unique_application UNIQUE (request_id, walker_id)
-      )
-    `);
-
-    await db.execute(`
       CREATE TABLE IF NOT EXISTS WalkRatings (
         rating_id INT AUTO_INCREMENT PRIMARY KEY,
         request_id INT NOT NULL,
@@ -97,10 +82,22 @@ let db;
       )
     `);
 
-    // Seed data only if Users table empty
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS WalkApplications (
+        application_id INT AUTO_INCREMENT PRIMARY KEY,
+        request_id INT NOT NULL,
+        walker_id INT NOT NULL,
+        applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
+        FOREIGN KEY (request_id) REFERENCES WalkRequests(request_id),
+        FOREIGN KEY (walker_id) REFERENCES Users(user_id),
+        CONSTRAINT unique_application UNIQUE (request_id, walker_id)
+      )
+    `);
+
+    // Insert test data if not already there
     const [users] = await db.query('SELECT COUNT(*) AS count FROM Users');
     if (users[0].count === 0) {
-      // Insert users
       await db.query(`
         INSERT INTO Users (username, email, password_hash, role) VALUES
         ('alice123', 'alice@example.com', 'hashed123', 'owner'),
@@ -110,59 +107,29 @@ let db;
         ('emily123', 'emily@example.com', 'hashed321', 'owner')
       `);
 
-      // Get relevant user IDs
-      const [[alice]] = await db.query(`SELECT user_id FROM Users WHERE username = 'alice123'`);
-      const [[carol]] = await db.query(`SELECT user_id FROM Users WHERE username = 'carol123'`);
-      const [[emily]] = await db.query(`SELECT user_id FROM Users WHERE username = 'emily123'`);
-      const [[bob]] = await db.query(`SELECT user_id FROM Users WHERE username = 'bobwalker'`);
-      const [[david]] = await db.query(`SELECT user_id FROM Users WHERE username = 'davidwalker'`);
-
-      // Insert dogs
       await db.query(`
-        INSERT INTO Dogs (name, size, owner_id) VALUES
-        ('Max', 'medium', ?),
-        ('Bella', 'small', ?),
-        ('Rocky', 'large', ?),
-        ('Buddy', 'small', ?),
-        ('Cooper', 'medium', ?)
-      `, [alice.user_id, carol.user_id, emily.user_id, alice.user_id, carol.user_id]);
+        INSERT INTO Dogs (name, size, owner_id)
+        VALUES
+        ('Max', 'medium', (SELECT user_id FROM Users WHERE username = 'alice123')),
+        ('Bella', 'small', (SELECT user_id FROM Users WHERE username = 'carol123')),
+        ('Rocky', 'large', (SELECT user_id FROM Users WHERE username = 'emily123')),
+        ('Buddy', 'small', (SELECT user_id FROM Users WHERE username = 'alice123')),
+        ('Cooper', 'medium', (SELECT user_id FROM Users WHERE username = 'carol123'))
+      `);
 
-      // Get dog IDs
-      const [[maxDog]] = await db.query(`SELECT dog_id FROM Dogs WHERE name = 'Max' AND owner_id = ?`, [alice.user_id]);
-      const [[bellaDog]] = await db.query(`SELECT dog_id FROM Dogs WHERE name = 'Bella' AND owner_id = ?`, [carol.user_id]);
-      const [[rockyDog]] = await db.query(`SELECT dog_id FROM Dogs WHERE name = 'Rocky' AND owner_id = ?`, [emily.user_id]);
-      const [[buddyDog]] = await db.query(`SELECT dog_id FROM Dogs WHERE name = 'Buddy' AND owner_id = ?`, [alice.user_id]);
-      const [[cooperDog]] = await db.query(`SELECT dog_id FROM Dogs WHERE name = 'Cooper' AND owner_id = ?`, [carol.user_id]);
-
-      // Insert walk requests
       await db.query(`
-        INSERT INTO WalkRequests (dog_id, requested_time, duration_minutes, location, status) VALUES
-        (?, '2025-06-10 08:00:00', 30, 'Parklands', 'open'),
-        (?, '2025-06-10 09:30:00', 45, 'Beachside Ave', 'accepted'),
-        (?, '2025-06-11 07:15:00', 60, 'Riverwalk Trail', 'open'),
-        (?, '2025-06-11 10:00:00', 20, 'Central Park', 'completed'),
-        (?, '2025-06-12 16:30:00', 40, 'Greenfield Gardens', 'cancelled')
-      `, [maxDog.dog_id, bellaDog.dog_id, rockyDog.dog_id, buddyDog.dog_id, cooperDog.dog_id]);
-
-      // Get request_id for completed walk for Buddy
-      const [[completedRequest]] = await db.query(`
-        SELECT request_id FROM WalkRequests WHERE dog_id = ? AND status = 'completed'
-      `, [buddyDog.dog_id]);
-
-      // Insert WalkApplication for bobwalker accepted for completed walk
-      await db.query(`
-        INSERT INTO WalkApplications (request_id, walker_id, status)
-        VALUES (?, ?, 'accepted')
-      `, [completedRequest.request_id, bob.user_id]);
-
-      // Insert WalkRating for that walk
-      await db.query(`
-        INSERT INTO WalkRatings (request_id, walker_id, owner_id, rating, comments)
-        VALUES (?, ?, ?, 5, 'Great walk, very punctual!')
-      `, [completedRequest.request_id, bob.user_id, alice.user_id]);
+        INSERT INTO WalkRequests (dog_id, requested_time, duration_minutes, location, status)
+        VALUES
+        ((SELECT dog_id FROM Dogs WHERE name = 'Max' AND owner_id = (SELECT user_id FROM Users WHERE username = 'alice123')), '2025-06-10 08:00:00', 30, 'Parklands', 'open'),
+        ((SELECT dog_id FROM Dogs WHERE name = 'Bella' AND owner_id = (SELECT user_id FROM Users WHERE username = 'carol123')), '2025-06-10 09:30:00', 45, 'Beachside Ave', 'accepted'),
+        ((SELECT dog_id FROM Dogs WHERE name = 'Rocky' AND owner_id = (SELECT user_id FROM Users WHERE username = 'emily123')), '2025-06-11 07:15:00', 60, 'Riverwalk Trail', 'open'),
+        ((SELECT dog_id FROM Dogs WHERE name = 'Buddy' AND owner_id = (SELECT user_id FROM Users WHERE username = 'alice123')), '2025-06-11 10:00:00', 20, 'Central Park', 'completed'),
+        ((SELECT dog_id FROM Dogs WHERE name = 'Cooper' AND owner_id = (SELECT user_id FROM Users WHERE username = 'carol123')), '2025-06-12 16:30:00', 40, 'Greenfield Gardens', 'cancelled')
+      `);
     }
 
-    // API endpoints
+    // --- API ROUTES ---
+
     app.get('/api/dogs', async (req, res) => {
       try {
         const [dogs] = await db.query(`
@@ -202,19 +169,20 @@ let db;
         const [summary] = await db.query(`
           SELECT
             u.username AS walker_username,
-            COUNT(DISTINCT wr.rating_id) AS total_ratings,
+            COUNT(wr.rating_id) AS total_ratings,
             ROUND(AVG(wr.rating), 1) AS average_rating,
-            COUNT(DISTINCT wa.request_id) AS completed_walks
+            (
+              SELECT COUNT(*) FROM WalkRequests req
+              JOIN WalkApplications wa ON req.request_id = wa.request_id
+              WHERE wa.walker_id = u.user_id AND req.status = 'completed' AND wa.status = 'accepted'
+            ) AS completed_walks
           FROM Users u
           LEFT JOIN WalkRatings wr ON wr.walker_id = u.user_id
-          LEFT JOIN WalkApplications wa ON wa.walker_id = u.user_id AND wa.status = 'accepted'
-          LEFT JOIN WalkRequests wrq ON wrq.request_id = wa.request_id AND wrq.status = 'completed'
           WHERE u.role = 'walker'
           GROUP BY u.user_id
         `);
         res.json(summary);
       } catch (err) {
-        console.error(err);
         res.status(500).json({ error: 'Failed to fetch walker summary' });
       }
     });
