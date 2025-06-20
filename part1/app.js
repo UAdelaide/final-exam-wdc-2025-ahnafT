@@ -172,34 +172,33 @@ let db;
             }
         });
 
-        app.get('/api/walkers/summary', async (req, res) => {
-            try {
-                const [summary] = await db.query(`
-          SELECT
-            u.username AS walker_username,
-            COUNT(wr.rating_id) AS total_ratings,
-            ROUND(AVG(wr.rating), 1) AS average_rating,
-            (
-              SELECT COUNT(*)
-              FROM WalkRequests req
-              JOIN WalkApplications wa ON req.request_id = wa.request_id
-              WHERE wa.walker_id = u.user_id
-                AND req.status = 'completed'
-                AND wa.status = 'accepted'
-            ) AS completed_walks
-          FROM Users u
-          LEFT JOIN WalkRatings wr ON wr.walker_id = u.user_id
-            AND wr.request_id IN (
-              SELECT request_id FROM WalkRequests WHERE status = 'completed'
-            )
-          WHERE u.role = 'walker'
-          GROUP BY u.user_id
-        `);
-                res.json(summary);
-            } catch (err) {
-                res.status(500).json({ error: 'Failed to fetch walker summary' });
-            }
-        });
+       app.get('/api/walkers/summary', async (req, res) => {
+  try {
+    const [summary] = await db.query(`
+      SELECT
+        u.username AS walker_username,
+        COUNT(wr.rating_id) AS total_ratings,
+        ROUND(AVG(wr.rating), 1) AS average_rating,
+        (
+          SELECT COUNT(*)
+          FROM WalkRequests req
+          JOIN WalkApplications wa ON req.request_id = wa.request_id
+          WHERE wa.walker_id = u.user_id
+            AND req.status = 'completed'
+            AND wa.status = 'accepted'
+        ) AS completed_walks
+      FROM Users u
+      LEFT JOIN WalkRatings wr ON wr.walker_id = u.user_id
+      LEFT JOIN WalkRequests req ON wr.request_id = req.request_id AND req.status = 'completed'
+      WHERE u.role = 'walker'
+      GROUP BY u.user_id
+    `);
+    res.json(summary);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch walker summary' });
+  }
+});
+
 
     } catch (err) {
         console.error('Database setup error:', err);
