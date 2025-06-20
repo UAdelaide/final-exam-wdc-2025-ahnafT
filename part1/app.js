@@ -126,7 +126,6 @@ let db;
       `);
         }
 
-        // --- API ROUTES ---
 
         app.get('/api/dogs', async (req, res) => {
             try {
