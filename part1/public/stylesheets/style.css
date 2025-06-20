@@ -21,9 +21,9 @@ body {
 button {
   padding: 20px;
   background-color: pink;
-  color: pink; /* Text matches background */
+  color: pink;
   font-size: 1.1em;
   border-radius: 25px;
   border: none;
-  cursor: crosshair; /* Confusing cursor */
+  cursor: crosshair;
 }
