@@ -67,6 +67,19 @@ let db;
     `);
 
     await db.execute(`
+      CREATE TABLE IF NOT EXISTS WalkApplications (
+        application_id INT AUTO_INCREMENT PRIMARY KEY,
+        request_id INT NOT NULL,
+        walker_id INT NOT NULL,
+        applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
+        FOREIGN KEY (request_id) REFERENCES WalkRequests(request_id),
+        FOREIGN KEY (walker_id) REFERENCES Users(user_id),
+        CONSTRAINT unique_application UNIQUE (request_id, walker_id)
+      )
+    `);
+
+    await db.execute(`
       CREATE TABLE IF NOT EXISTS WalkRatings (
         rating_id INT AUTO_INCREMENT PRIMARY KEY,
         request_id INT NOT NULL,
@@ -79,19 +92,6 @@ let db;
         FOREIGN KEY (walker_id) REFERENCES Users(user_id),
         FOREIGN KEY (owner_id) REFERENCES Users(user_id),
         CONSTRAINT unique_rating_per_walk UNIQUE (request_id)
-      )
-    `);
-
-    await db.execute(`
-      CREATE TABLE IF NOT EXISTS WalkApplications (
-        application_id INT AUTO_INCREMENT PRIMARY KEY,
-        request_id INT NOT NULL,
-        walker_id INT NOT NULL,
-        applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
-        FOREIGN KEY (request_id) REFERENCES WalkRequests(request_id),
-        FOREIGN KEY (walker_id) REFERENCES Users(user_id),
-        CONSTRAINT unique_application UNIQUE (request_id, walker_id)
       )
     `);
 
@@ -138,7 +138,44 @@ let db;
       ((SELECT dog_id FROM Dogs WHERE name = 'Bella' AND owner_id = (SELECT user_id FROM Users WHERE username = 'carol123')), '2025-06-10 09:30:00', 45, 'Beachside Ave', 'accepted'),
       ((SELECT dog_id FROM Dogs WHERE name = 'Rocky' AND owner_id = (SELECT user_id FROM Users WHERE username = 'emily123')), '2025-06-11 07:15:00', 60, 'Riverwalk Trail', 'open'),
       ((SELECT dog_id FROM Dogs WHERE name = 'Buddy' AND owner_id = (SELECT user_id FROM Users WHERE username = 'alice123')), '2025-06-11 10:00:00', 20, 'Central Park', 'completed'),
-      ((SELECT dog_id FROM Dogs WHERE name = 'Cooper' AND owner_id = (SELECT user_id FROM Users WHERE username = 'carol123')), '2025-06-12 16:30:00', 40, 'Greenfield Gardens', 'cancelled')
+      ((SELECT dog_id FROM Dogs WHERE name = 'Cooper' AND owner_id = (SELECT user_id FROM Users WHERE username = 'carol123')), '2025-06-12 16:30:00', 40, 'Greenfield Gardens', 'cancelled'),
+      ((SELECT dog_id FROM Dogs WHERE name = 'Max' AND owner_id = (SELECT user_id FROM Users WHERE username = 'alice123')), '2025-06-13 09:00:00', 30, 'City Park', 'completed')
+    `);
+
+    // Insert WalkApplications
+    await db.query(`
+      INSERT INTO WalkApplications (request_id, walker_id, status)
+      VALUES
+      (
+        (SELECT request_id FROM WalkRequests WHERE status = 'completed' AND dog_id = (SELECT dog_id FROM Dogs WHERE name = 'Buddy' AND owner_id = (SELECT user_id FROM Users WHERE username = 'alice123')) LIMIT 1),
+        (SELECT user_id FROM Users WHERE username = 'bobwalker'),
+        'accepted'
+      ),
+      (
+        (SELECT request_id FROM WalkRequests WHERE status = 'completed' AND dog_id = (SELECT dog_id FROM Dogs WHERE name = 'Max' AND owner_id = (SELECT user_id FROM Users WHERE username = 'alice123')) AND location = 'City Park' LIMIT 1),
+        (SELECT user_id FROM Users WHERE username = 'bobwalker'),
+        'accepted'
+      )
+    `);
+
+    // Insert WalkRatings
+    await db.query(`
+      INSERT INTO WalkRatings (request_id, walker_id, owner_id, rating, comments)
+      VALUES
+      (
+        (SELECT request_id FROM WalkRequests WHERE status = 'completed' AND dog_id = (SELECT dog_id FROM Dogs WHERE name = 'Buddy' AND owner_id = (SELECT user_id FROM Users WHERE username = 'alice123')) LIMIT 1),
+        (SELECT user_id FROM Users WHERE username = 'bobwalker'),
+        (SELECT user_id FROM Users WHERE username = 'alice123'),
+        5,
+        'Great walk, very punctual!'
+      ),
+      (
+        (SELECT request_id FROM WalkRequests WHERE status = 'completed' AND dog_id = (SELECT dog_id FROM Dogs WHERE name = 'Max' AND owner_id = (SELECT user_id FROM Users WHERE username = 'alice123')) AND location = 'City Park' LIMIT 1),
+        (SELECT user_id FROM Users WHERE username = 'bobwalker'),
+        (SELECT user_id FROM Users WHERE username = 'alice123'),
+        4,
+        'Good job, but a bit rushed.'
+      )
     `);
 
     // --- API ROUTES ---
@@ -152,6 +189,7 @@ let db;
         `);
         res.json(dogs);
       } catch (err) {
+        console.error('Error fetching dogs:', err);
         res.status(500).json({ error: 'Failed to fetch dogs' });
       }
     });
@@ -184,15 +222,13 @@ let db;
         const [summary] = await db.query(`
           SELECT
             u.username AS walker_username,
-            COUNT(wr.rating_id) AS total_ratings,
+            COUNT(DISTINCT wr.rating_id) AS total_ratings,
             ROUND(AVG(wr.rating), 1) AS average_rating,
-            (
-              SELECT COUNT(*) FROM WalkRequests req
-              JOIN WalkApplications wa ON req.request_id = wa.request_id
-              WHERE wa.walker_id = u.user_id AND req.status = 'completed' AND wa.status = 'accepted'
-            ) AS completed_walks
+            COUNT(DISTINCT CASE WHEN wa.status = 'accepted' AND r.status = 'completed' THEN wa.request_id END) AS completed_walks
           FROM Users u
           LEFT JOIN WalkRatings wr ON wr.walker_id = u.user_id
+          LEFT JOIN WalkApplications wa ON wa.walker_id = u.user_id
+          LEFT JOIN WalkRequests r ON wa.request_id = r.request_id
           WHERE u.role = 'walker'
           GROUP BY u.user_id
         `);
