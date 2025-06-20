@@ -180,24 +180,18 @@ let db;
       }
     });
 
-    app.get('/api/walkers/summary', async (req, res) => {
+   app.get('/api/walkers/summary', async (req, res) => {
   try {
     const [summary] = await db.query(`
       SELECT
         u.username AS walker_username,
         COUNT(DISTINCT wr.rating_id) AS total_ratings,
         ROUND(AVG(wr.rating), 1) AS average_rating,
-        COUNT(DISTINCT wa.request_id) AS completed_walks
+        COUNT(DISTINCT CASE WHEN wa.status = 'accepted' AND r.status = 'completed' THEN wa.request_id END) AS completed_walks
       FROM Users u
       LEFT JOIN WalkRatings wr ON wr.walker_id = u.user_id
-      LEFT JOIN WalkApplications wa
-        ON wa.walker_id = u.user_id
-        AND wa.status = 'accepted'
-        AND EXISTS (
-          SELECT 1 FROM WalkRequests r
-          WHERE r.request_id = wa.request_id
-          AND r.status = 'completed'
-        )
+      LEFT JOIN WalkApplications wa ON wa.walker_id = u.user_id
+      LEFT JOIN WalkRequests r ON wa.request_id = r.request_id
       WHERE u.role = 'walker'
       GROUP BY u.user_id
     `);
