@@ -31,7 +31,6 @@ let db;
       database: 'DogWalkService'
     });
 
-    // Create tables
     await db.execute(`
       CREATE TABLE IF NOT EXISTS Users (
         user_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -178,8 +177,6 @@ let db;
       )
     `);
 
-    // --- API ROUTES ---
-
     app.get('/api/dogs', async (req, res) => {
       try {
         const [dogs] = await db.query(`
@@ -209,7 +206,7 @@ let db;
           JOIN Users ON Dogs.owner_id = Users.user_id
           WHERE WalkRequests.status = 'open'
         `);
-        console.log('Open walk requests:', requests); // Debug log
+        console.log('Open walk requests:', requests);
         res.json(requests);
       } catch (err) {
         console.error('Error fetching open walk requests:', err);
