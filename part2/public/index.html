@@ -36,6 +36,36 @@
         </form>
       </div>
     </div>
+
+    <!-- Added section for all registered dogs table -->
+    <h2 class="text-center mt-5 mb-3">All Registered Dogs</h2>
+
+    <!-- Center the table and limit max width -->
+    <div class="d-flex justify-content-center">
+      <table class="table table-striped" style="max-width: 900px;">
+        <thead class="table-primary">
+          <tr>
+            <th>Dog ID</th>
+            <th>Name</th>
+            <th>Size</th>
+            <th>Owner ID</th>
+            <th>Photo</th> <!-- Added photo column -->
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="dog in dogs" :key="dog.dog_id">
+            <td>{{ dog.dog_id }}</td>
+            <td>{{ dog.name }}</td>
+            <td>{{ dog.size }}</td>
+            <td>{{ dog.owner_id }}</td>
+            <td>
+              <img :src="dog.photoUrl" alt="Dog photo" style="height: 80px; border-radius: 8px;">
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
   </div>
 
   <script>
@@ -46,7 +76,9 @@
           message: 'Welcome to the Dog Walking Service!',
           // Added username and password data properties for login form binding
           username: '',
-          password: ''
+          password: '',
+          // Added dogs array to store dog info + photos
+          dogs: []
         };
       },
       methods: {
@@ -85,7 +117,39 @@
           xmlhttp.open('POST', '/api/users/login', true);
           xmlhttp.setRequestHeader('Content-Type', 'application/json');
           xmlhttp.send(JSON.stringify(user));
+        },
+        // New method added to load dogs and their random photos
+        async loadDogs() {
+          try {
+            const res = await fetch('/api/dogs');
+            const dogsData = await res.json();
+
+            // For each dog fetch a random dog photo
+            const dogsWithPhotos = await Promise.all(
+              dogsData.map(async dog => {
+                let photoUrl = 'https://via.placeholder.com/100?text=No+Image'; // fallback
+                try {
+                  const photoRes = await fetch('https://dog.ceo/api/breeds/image/random');
+                  const photoData = await photoRes.json();
+                  if (photoData.status === 'success') {
+                    photoUrl = photoData.message;
+                  }
+                } catch {
+                  // fallback if API fails, do nothing
+                }
+                return { ...dog, photoUrl };
+              })
+            );
+
+            this.dogs = dogsWithPhotos;
+          } catch (error) {
+            console.error('Failed to load dogs:', error);
+          }
         }
+      },
+      mounted() {
+        // Call loadDogs when component mounts
+        this.loadDogs();
       }
     }).mount('#app');
   </script>
