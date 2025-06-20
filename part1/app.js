@@ -181,29 +181,33 @@ let db;
     });
 
     app.get('/api/walkers/summary', async (req, res) => {
-      try {
-        const [summary] = await db.query(`
-          SELECT
-            u.username AS walker_username,
-            COUNT(r.rating_id) AS total_ratings,
-            ROUND(AVG(r.rating), 1) AS average_rating,
-            COUNT(DISTINCT CASE
-              WHEN wr.status = 'completed' AND wa.status = 'accepted' THEN wr.request_id
-              ELSE NULL
-            END) AS completed_walks
-          FROM Users u
-          LEFT JOIN WalkRatings r ON r.walker_id = u.user_id
-          LEFT JOIN WalkRequests wr ON r.request_id = wr.request_id
-          LEFT JOIN WalkApplications wa ON wa.request_id = wr.request_id AND wa.walker_id = u.user_id
-          WHERE u.role = 'walker'
-          GROUP BY u.user_id
-        `);
-        res.json(summary);
-      } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Failed to fetch walker summary' });
-      }
-    });
+  try {
+    const [summary] = await db.query(`
+      SELECT
+        u.username AS walker_username,
+        COUNT(DISTINCT wr.rating_id) AS total_ratings,
+        ROUND(AVG(wr.rating), 1) AS average_rating,
+        COUNT(DISTINCT wa.request_id) AS completed_walks
+      FROM Users u
+      LEFT JOIN WalkRatings wr ON wr.walker_id = u.user_id
+      LEFT JOIN WalkApplications wa
+        ON wa.walker_id = u.user_id
+        AND wa.status = 'accepted'
+        AND EXISTS (
+          SELECT 1 FROM WalkRequests r
+          WHERE r.request_id = wa.request_id
+          AND r.status = 'completed'
+        )
+      WHERE u.role = 'walker'
+      GROUP BY u.user_id
+    `);
+    res.json(summary);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch walker summary' });
+  }
+});
+
 
   } catch (err) {
     console.error('Database setup error:', err);
