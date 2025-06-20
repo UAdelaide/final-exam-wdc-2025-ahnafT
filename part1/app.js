@@ -14,24 +14,24 @@ app.use(cookieParser());
 let db;
 
 (async () => {
-    try {
-        const connection = await mysql.createConnection({
-            host: 'localhost',
-            user: 'root',
-            password: ''
-        });
+  try {
+    const connection = await mysql.createConnection({
+      host: 'localhost',
+      user: 'root',
+      password: ''
+    });
 
-        await connection.query('CREATE DATABASE IF NOT EXISTS DogWalkService');
-        await connection.end();
+    await connection.query('CREATE DATABASE IF NOT EXISTS DogWalkService');
+    await connection.end();
 
-        db = await mysql.createConnection({
-            host: 'localhost',
-            user: 'root',
-            password: '',
-            database: 'DogWalkService'
-        });
+    db = await mysql.createConnection({
+      host: 'localhost',
+      user: 'root',
+      password: '',
+      database: 'DogWalkService'
+    });
 
-        await db.execute(`
+    await db.execute(`
       CREATE TABLE IF NOT EXISTS Users (
         user_id INT AUTO_INCREMENT PRIMARY KEY,
         username VARCHAR(50) UNIQUE NOT NULL,
@@ -42,7 +42,7 @@ let db;
       )
     `);
 
-        await db.execute(`
+    await db.execute(`
       CREATE TABLE IF NOT EXISTS Dogs (
         dog_id INT AUTO_INCREMENT PRIMARY KEY,
         owner_id INT NOT NULL,
@@ -52,7 +52,7 @@ let db;
       )
     `);
 
-        await db.execute(`
+    await db.execute(`
       CREATE TABLE IF NOT EXISTS WalkRequests (
         request_id INT AUTO_INCREMENT PRIMARY KEY,
         dog_id INT NOT NULL,
@@ -65,7 +65,7 @@ let db;
       )
     `);
 
-        await db.execute(`
+    await db.execute(`
       CREATE TABLE IF NOT EXISTS WalkRatings (
         rating_id INT AUTO_INCREMENT PRIMARY KEY,
         request_id INT NOT NULL,
@@ -81,7 +81,7 @@ let db;
       )
     `);
 
-        await db.execute(`
+    await db.execute(`
       CREATE TABLE IF NOT EXISTS WalkApplications (
         application_id INT AUTO_INCREMENT PRIMARY KEY,
         request_id INT NOT NULL,
@@ -94,9 +94,9 @@ let db;
       )
     `);
 
-        const [users] = await db.query('SELECT COUNT(*) AS count FROM Users');
-        if (users[0].count === 0) {
-            await db.query(`
+    const [users] = await db.query('SELECT COUNT(*) AS count FROM Users');
+    if (users[0].count === 0) {
+      await db.query(`
         INSERT INTO Users (username, email, password_hash, role) VALUES
         ('alice123', 'alice@example.com', 'hashed123', 'owner'),
         ('bobwalker', 'bob@example.com', 'hashed456', 'walker'),
@@ -105,7 +105,7 @@ let db;
         ('emily123', 'emily@example.com', 'hashed321', 'owner')
       `);
 
-            await db.query(`
+      await db.query(`
         INSERT INTO Dogs (name, size, owner_id)
         VALUES
         ('Max', 'medium', (SELECT user_id FROM Users WHERE username = 'alice123')),
@@ -115,7 +115,7 @@ let db;
         ('Cooper', 'medium', (SELECT user_id FROM Users WHERE username = 'carol123'))
       `);
 
-            await db.query(`
+      await db.query(`
         INSERT INTO WalkRequests (dog_id, requested_time, duration_minutes, location, status)
         VALUES
         ((SELECT dog_id FROM Dogs WHERE name = 'Max' AND owner_id = (SELECT user_id FROM Users WHERE username = 'alice123')), '2025-06-10 08:00:00', 30, 'Parklands', 'open'),
@@ -125,35 +125,43 @@ let db;
         ((SELECT dog_id FROM Dogs WHERE name = 'Cooper' AND owner_id = (SELECT user_id FROM Users WHERE username = 'carol123')), '2025-06-12 16:30:00', 40, 'Greenfield Gardens', 'cancelled')
       `);
 
-            await db.query(`
-  INSERT INTO WalkRatings (request_id, walker_id, owner_id, rating, comments)
-  VALUES (
-    (SELECT request_id FROM WalkRequests WHERE status = 'completed' AND dog_id = (SELECT dog_id FROM Dogs WHERE name = 'Buddy') LIMIT 1),
-    (SELECT user_id FROM Users WHERE username = 'bobwalker' LIMIT 1),
-    (SELECT user_id FROM Users WHERE username = 'alice123' LIMIT 1),
-    5,
-    'Great walk, very punctual!'
-  )
-`);
-        }
+      await db.query(`
+        INSERT INTO WalkApplications (request_id, walker_id, status)
+        VALUES (
+          (SELECT request_id FROM WalkRequests WHERE status = 'completed' AND dog_id = (SELECT dog_id FROM Dogs WHERE name = 'Buddy') LIMIT 1),
+          (SELECT user_id FROM Users WHERE username = 'bobwalker'),
+          'accepted'
+        )
+      `);
 
+      await db.query(`
+        INSERT INTO WalkRatings (request_id, walker_id, owner_id, rating, comments)
+        VALUES (
+          (SELECT request_id FROM WalkRequests WHERE status = 'completed' AND dog_id = (SELECT dog_id FROM Dogs WHERE name = 'Buddy') LIMIT 1),
+          (SELECT user_id FROM Users WHERE username = 'bobwalker'),
+          (SELECT user_id FROM Users WHERE username = 'alice123'),
+          5,
+          'Great walk, very punctual!'
+        )
+      `);
+    }
 
-        app.get('/api/dogs', async (req, res) => {
-            try {
-                const [dogs] = await db.query(`
+    app.get('/api/dogs', async (req, res) => {
+      try {
+        const [dogs] = await db.query(`
           SELECT Dogs.name AS dog_name, Dogs.size, Users.username AS owner_username
           FROM Dogs
           JOIN Users ON Dogs.owner_id = Users.user_id
         `);
-                res.json(dogs);
-            } catch (err) {
-                res.status(500).json({ error: 'Failed to fetch dogs' });
-            }
-        });
+        res.json(dogs);
+      } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch dogs' });
+      }
+    });
 
-        app.get('/api/walkrequests/open', async (req, res) => {
-            try {
-                const [requests] = await db.query(`
+    app.get('/api/walkrequests/open', async (req, res) => {
+      try {
+        const [requests] = await db.query(`
           SELECT
             WalkRequests.request_id,
             Dogs.name AS dog_name,
@@ -166,41 +174,40 @@ let db;
           JOIN Users ON Dogs.owner_id = Users.user_id
           WHERE WalkRequests.status = 'open'
         `);
-                res.json(requests);
-            } catch (err) {
-                res.status(500).json({ error: 'Failed to fetch open walk requests' });
-            }
-        });
+        res.json(requests);
+      } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch open walk requests' });
+      }
+    });
 
-      app.get('/api/walkers/summary', async (req, res) => {
-  try {
-    const [summary] = await db.query(`
-      SELECT
-        u.username AS walker_username,
-        COUNT(r.rating_id) AS total_ratings,
-        ROUND(AVG(r.rating), 1) AS average_rating,
-        COUNT(DISTINCT CASE
-          WHEN wr.status = 'completed' AND wa.status = 'accepted' THEN wr.request_id
-          ELSE NULL
-        END) AS completed_walks
-      FROM Users u
-      LEFT JOIN WalkRatings r ON r.walker_id = u.user_id
-      LEFT JOIN WalkRequests wr ON r.request_id = wr.request_id
-      LEFT JOIN WalkApplications wa ON wa.request_id = wr.request_id AND wa.walker_id = u.user_id
-      WHERE u.role = 'walker'
-      GROUP BY u.user_id
-    `);
-    res.json(summary);
+    app.get('/api/walkers/summary', async (req, res) => {
+      try {
+        const [summary] = await db.query(`
+          SELECT
+            u.username AS walker_username,
+            COUNT(r.rating_id) AS total_ratings,
+            ROUND(AVG(r.rating), 1) AS average_rating,
+            COUNT(DISTINCT CASE
+              WHEN wr.status = 'completed' AND wa.status = 'accepted' THEN wr.request_id
+              ELSE NULL
+            END) AS completed_walks
+          FROM Users u
+          LEFT JOIN WalkRatings r ON r.walker_id = u.user_id
+          LEFT JOIN WalkRequests wr ON r.request_id = wr.request_id
+          LEFT JOIN WalkApplications wa ON wa.request_id = wr.request_id AND wa.walker_id = u.user_id
+          WHERE u.role = 'walker'
+          GROUP BY u.user_id
+        `);
+        res.json(summary);
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch walker summary' });
+      }
+    });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to fetch walker summary' });
+    console.error('Database setup error:', err);
   }
-});
-
-
-    } catch (err) {
-        console.error('Database setup error:', err);
-    }
 })();
 
 app.use(express.static(path.join(__dirname, 'public')));
