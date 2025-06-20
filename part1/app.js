@@ -95,9 +95,10 @@ let db;
       )
     `);
 
-    // Insert test data if not already there
+    // Insert test data if Users table empty
     const [users] = await db.query('SELECT COUNT(*) AS count FROM Users');
     if (users[0].count === 0) {
+      // Insert users
       await db.query(`
         INSERT INTO Users (username, email, password_hash, role) VALUES
         ('alice123', 'alice@example.com', 'hashed123', 'owner'),
@@ -107,9 +108,9 @@ let db;
         ('emily123', 'emily@example.com', 'hashed321', 'owner')
       `);
 
+      // Insert dogs — note owner_id referenced by subqueries here
       await db.query(`
-        INSERT INTO Dogs (name, size, owner_id)
-        VALUES
+        INSERT INTO Dogs (name, size, owner_id) VALUES
         ('Max', 'medium', (SELECT user_id FROM Users WHERE username = 'alice123')),
         ('Bella', 'small', (SELECT user_id FROM Users WHERE username = 'carol123')),
         ('Rocky', 'large', (SELECT user_id FROM Users WHERE username = 'emily123')),
@@ -117,9 +118,9 @@ let db;
         ('Cooper', 'medium', (SELECT user_id FROM Users WHERE username = 'carol123'))
       `);
 
+      // Insert walk requests — dog_id referenced by subqueries
       await db.query(`
-        INSERT INTO WalkRequests (dog_id, requested_time, duration_minutes, location, status)
-        VALUES
+        INSERT INTO WalkRequests (dog_id, requested_time, duration_minutes, location, status) VALUES
         ((SELECT dog_id FROM Dogs WHERE name = 'Max' AND owner_id = (SELECT user_id FROM Users WHERE username = 'alice123')), '2025-06-10 08:00:00', 30, 'Parklands', 'open'),
         ((SELECT dog_id FROM Dogs WHERE name = 'Bella' AND owner_id = (SELECT user_id FROM Users WHERE username = 'carol123')), '2025-06-10 09:30:00', 45, 'Beachside Ave', 'accepted'),
         ((SELECT dog_id FROM Dogs WHERE name = 'Rocky' AND owner_id = (SELECT user_id FROM Users WHERE username = 'emily123')), '2025-06-11 07:15:00', 60, 'Riverwalk Trail', 'open'),
