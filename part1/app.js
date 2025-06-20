@@ -31,7 +31,6 @@ let db;
             database: 'DogWalkService'
         });
 
-        // Create tables
         await db.execute(`
       CREATE TABLE IF NOT EXISTS Users (
         user_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -95,7 +94,6 @@ let db;
       )
     `);
 
-        // Insert test data if not already there
         const [users] = await db.query('SELECT COUNT(*) AS count FROM Users');
         if (users[0].count === 0) {
             await db.query(`
