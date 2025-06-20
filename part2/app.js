@@ -23,6 +23,18 @@ const userRoutes = require('./routes/userRoutes');
 app.use('/api/walks', walkRoutes);
 app.use('/api/users', userRoutes);
 
+let db;
+
+(async () => {
+  try {
+    // ✅ Connect to DB
+    db = await mysql.createConnection({
+      host: 'localhost',
+      user: 'root',
+      password: '',
+      database: 'DogWalkService'
+    });
+
 app.get('/api/dogs', async (req, res) => {
   try {
     const [dogs] = await db.query(`
