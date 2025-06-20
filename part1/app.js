@@ -95,38 +95,51 @@ let db;
       )
     `);
 
-    // Insert test data if not already there
-    const [users] = await db.query('SELECT COUNT(*) AS count FROM Users');
-    if (users[0].count === 0) {
-      await db.query(`
-        INSERT INTO Users (username, email, password_hash, role) VALUES
-        ('alice123', 'alice@example.com', 'hashed123', 'owner'),
-        ('bobwalker', 'bob@example.com', 'hashed456', 'walker'),
-        ('carol123', 'carol@example.com', 'hashed789', 'owner'),
-        ('davidwalker', 'david@example.com', 'hashed999', 'walker'),
-        ('emily123', 'emily@example.com', 'hashed321', 'owner')
-      `);
+    // Clear existing data to ensure clean insertion
+    await db.execute('DELETE FROM WalkRatings');
+    await db.execute('DELETE FROM WalkApplications');
+    await db.execute('DELETE FROM WalkRequests');
+    await db.execute('DELETE FROM Dogs');
+    await db.execute('DELETE FROM Users');
 
-      await db.query(`
-        INSERT INTO Dogs (name, size, owner_id)
-        VALUES
-        ('Max', 'medium', (SELECT user_id FROM Users WHERE username = 'alice123')),
-        ('Bella', 'small', (SELECT user_id FROM Users WHERE username = 'carol123')),
-        ('Rocky', 'large', (SELECT user_id FROM Users WHERE username = 'emily123')),
-        ('Buddy', 'small', (SELECT user_id FROM Users WHERE username = 'alice123')),
-        ('Cooper', 'medium', (SELECT user_id FROM Users WHERE username = 'carol123'))
-      `);
+    // Reset AUTO_INCREMENT counters
+    await db.execute('ALTER TABLE Users AUTO_INCREMENT = 1');
+    await db.execute('ALTER TABLE Dogs AUTO_INCREMENT = 1');
+    await db.execute('ALTER TABLE WalkRequests AUTO_INCREMENT = 1');
+    await db.execute('ALTER TABLE WalkApplications AUTO_INCREMENT = 1');
+    await db.execute('ALTER TABLE WalkRatings AUTO_INCREMENT = 1');
 
-      await db.query(`
-        INSERT INTO WalkRequests (dog_id, requested_time, duration_minutes, location, status)
-        VALUES
-        ((SELECT dog_id FROM Dogs WHERE name = 'Max' AND owner_id = (SELECT user_id FROM Users WHERE username = 'alice123')), '2025-06-10 08:00:00', 30, 'Parklands', 'open'),
-        ((SELECT dog_id FROM Dogs WHERE name = 'Bella' AND owner_id = (SELECT user_id FROM Users WHERE username = 'carol123')), '2025-06-10 09:30:00', 45, 'Beachside Ave', 'accepted'),
-        ((SELECT dog_id FROM Dogs WHERE name = 'Rocky' AND owner_id = (SELECT user_id FROM Users WHERE username = 'emily123')), '2025-06-11 07:15:00', 60, 'Riverwalk Trail', 'open'),
-        ((SELECT dog_id FROM Dogs WHERE name = 'Buddy' AND owner_id = (SELECT user_id FROM Users WHERE username = 'alice123')), '2025-06-11 10:00:00', 20, 'Central Park', 'completed'),
-        ((SELECT dog_id FROM Dogs WHERE name = 'Cooper' AND owner_id = (SELECT user_id FROM Users WHERE username = 'carol123')), '2025-06-12 16:30:00', 40, 'Greenfield Gardens', 'cancelled')
-      `);
-    }
+    // Insert Users
+    await db.query(`
+      INSERT INTO Users (username, email, password_hash, role) VALUES
+      ('alice123', 'alice@example.com', 'hashed123', 'owner'),
+      ('bobwalker', 'bob@example.com', 'hashed456', 'walker'),
+      ('carol123', 'carol@example.com', 'hashed789', 'owner'),
+      ('davidwalker', 'david@example.com', 'hashed999', 'walker'),
+      ('emily123', 'emily@example.com', 'hashed321', 'owner')
+    `);
+
+    // Insert Dogs
+    await db.query(`
+      INSERT INTO Dogs (name, size, owner_id)
+      VALUES
+      ('Max', 'medium', (SELECT user_id FROM Users WHERE username = 'alice123')),
+      ('Bella', 'small', (SELECT user_id FROM Users WHERE username = 'carol123')),
+      ('Rocky', 'large', (SELECT user_id FROM Users WHERE username = 'emily123')),
+      ('Buddy', 'small', (SELECT user_id FROM Users WHERE username = 'alice123')),
+      ('Cooper', 'medium', (SELECT user_id FROM Users WHERE username = 'carol123'))
+    `);
+
+    // Insert WalkRequests
+    await db.query(`
+      INSERT INTO WalkRequests (dog_id, requested_time, duration_minutes, location, status)
+      VALUES
+      ((SELECT dog_id FROM Dogs WHERE name = 'Max' AND owner_id = (SELECT user_id FROM Users WHERE username = 'alice123')), '2025-06-10 08:00:00', 30, 'Parklands', 'open'),
+      ((SELECT dog_id FROM Dogs WHERE name = 'Bella' AND owner_id = (SELECT user_id FROM Users WHERE username = 'carol123')), '2025-06-10 09:30:00', 45, 'Beachside Ave', 'accepted'),
+      ((SELECT dog_id FROM Dogs WHERE name = 'Rocky' AND owner_id = (SELECT user_id FROM Users WHERE username = 'emily123')), '2025-06-11 07:15:00', 60, 'Riverwalk Trail', 'open'),
+      ((SELECT dog_id FROM Dogs WHERE name = 'Buddy' AND owner_id = (SELECT user_id FROM Users WHERE username = 'alice123')), '2025-06-11 10:00:00', 20, 'Central Park', 'completed'),
+      ((SELECT dog_id FROM Dogs WHERE name = 'Cooper' AND owner_id = (SELECT user_id FROM Users WHERE username = 'carol123')), '2025-06-12 16:30:00', 40, 'Greenfield Gardens', 'cancelled')
+    `);
 
     // --- API ROUTES ---
 
@@ -158,8 +171,10 @@ let db;
           JOIN Users ON Dogs.owner_id = Users.user_id
           WHERE WalkRequests.status = 'open'
         `);
+        console.log('Open walk requests:', requests); // Debug log
         res.json(requests);
       } catch (err) {
+        console.error('Error fetching open walk requests:', err);
         res.status(500).json({ error: 'Failed to fetch open walk requests' });
       }
     });
@@ -183,6 +198,7 @@ let db;
         `);
         res.json(summary);
       } catch (err) {
+        console.error('Error fetching walker summary:', err);
         res.status(500).json({ error: 'Failed to fetch walker summary' });
       }
     });
