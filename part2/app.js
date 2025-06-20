@@ -2,7 +2,6 @@ const express = require('express');
 const path = require('path');
 const session = require('express-session');
 const mysql = require('mysql2/promise');
-require('dotenv').config();
 
 const app = express();
 
@@ -11,10 +10,10 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, '/public')));
 
 app.use(session({
-    secret: 'secretsecret',
-    resave: false,
-    saveUninitialized: false,
-    cookie: { maxAge: 86400000 }
+  secret: 'secretsecret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { maxAge: 86400000 }
 }));
 
 // Routes
@@ -36,18 +35,24 @@ let db;
       database: 'DogWalkService'
     });
 
-app.get('/api/dogs', async (req, res) => {
-  try {
-    const [dogs] = await db.query(`
-      SELECT Dogs.dog_id, Dogs.name, Dogs.size, Dogs.owner_id
-      FROM Dogs
-    `);
-    res.json(dogs);
-  } catch (err) {
-    console.error('Error fetching dogs:', err);
-    res.status(500).json({ error: 'Failed to fetch dogs' });
-  }
-});
+    // ✅ Now that db is defined, define your custom /api/dogs route here
+    app.get('/api/dogs', async (req, res) => {
+      try {
+        const [dogs] = await db.query(`
+          SELECT Dogs.dog_id, Dogs.name, Dogs.size, Dogs.owner_id
+          FROM Dogs
+        `);
+        res.json(dogs);
+      } catch (err) {
+        console.error('Error fetching dogs:', err);
+        res.status(500).json({ error: 'Failed to fetch dogs' });
+      }
+    });
 
-// Export the app instead of listening here
+  } catch (err) {
+    console.error('Database connection error:', err);
+  }
+})();
+
+// ✅ Export the app
 module.exports = app;
