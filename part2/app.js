@@ -27,7 +27,7 @@ let db;
 
 (async () => {
   try {
-    // ✅ Connect to DB
+    //Connect to DB
     db = await mysql.createConnection({
       host: 'localhost',
       user: 'root',
@@ -35,7 +35,7 @@ let db;
       database: 'DogWalkService'
     });
 
-    // ✅ Now that db is defined, define your custom /api/dogs route here
+    //dog details
     app.get('/api/dogs', async (req, res) => {
       try {
         const [dogs] = await db.query(`
