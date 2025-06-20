@@ -125,7 +125,7 @@ let db;
         ((SELECT dog_id FROM Dogs WHERE name = 'Cooper' AND owner_id = (SELECT user_id FROM Users WHERE username = 'carol123')), '2025-06-12 16:30:00', 40, 'Greenfield Gardens', 'cancelled')
       `);
 
-            await db.query(`
+      await db.query(`
   INSERT INTO WalkRatings (request_id, walker_id, owner_id, rating, comments)
   VALUES (
     (SELECT request_id FROM WalkRequests WHERE status = 'completed' AND dog_id = (SELECT dog_id FROM Dogs WHERE name = 'Buddy') LIMIT 1),
@@ -176,23 +176,18 @@ let db;
             try {
                 const [summary] = await db.query(`
           SELECT
-  u.username AS walker_username,
-  COUNT(DISTINCT wr.rating_id) AS total_ratings,
-  ROUND(AVG(wr.rating), 1) AS average_rating,
-  (
-    SELECT COUNT(*)
-    FROM WalkRequests req
-    JOIN WalkApplications wa ON req.request_id = wa.request_id
-    WHERE wa.walker_id = u.user_id
-      AND req.status = 'completed'
-      AND wa.status = 'accepted'
-  ) AS completed_walks
-FROM Users u
-LEFT JOIN WalkRatings wr ON wr.walker_id = u.user_id
-  JOIN WalkRequests req ON wr.request_id = req.request_id AND req.status = 'completed'
-WHERE u.role = 'walker'
-GROUP BY u.user_id;
-
+            u.username AS walker_username,
+            COUNT(wr.rating_id) AS total_ratings,
+            ROUND(AVG(wr.rating), 1) AS average_rating,
+            (
+              SELECT COUNT(*) FROM WalkRequests req
+              JOIN WalkApplications wa ON req.request_id = wa.request_id
+              WHERE wa.walker_id = u.user_id AND req.status = 'completed' AND wa.status = 'accepted'
+            ) AS completed_walks
+          FROM Users u
+          LEFT JOIN WalkRatings wr ON wr.walker_id = u.user_id
+          WHERE u.role = 'walker'
+          GROUP BY u.user_id
         `);
                 res.json(summary);
             } catch (err) {
