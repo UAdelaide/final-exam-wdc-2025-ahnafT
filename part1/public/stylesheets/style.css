@@ -28,7 +28,10 @@ body {
 }
 
 button {
-  padding: 20px;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 15px 25px;
   background-color: #ffc0cb;
   color: #e48ca2;
   font-size: 1.1em;
