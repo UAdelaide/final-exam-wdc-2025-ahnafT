@@ -1,7 +1,7 @@
 html, body {
   width: 900px;
   height: 600px;
-  overflow: hidden; /* prevents scrolling */
+  overflow: hidden;
   margin: 0 auto;
 }
 
