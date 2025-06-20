@@ -10,10 +10,10 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, '/public')));
 
 app.use(session({
-  secret: 'secretsecret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { maxAge: 86400000 }
+    secret: 'secretsecret',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { maxAge: 86400000 }
 }));
 
 // Routes
