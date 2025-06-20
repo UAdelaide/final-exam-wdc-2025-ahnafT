@@ -73,7 +73,7 @@
             }
           };
 
-          xmlhttp.open('POST', '/api/users/login', true); // Adjusted to correct route if using /api/users
+          xmlhttp.open('POST', '/api/users/login', true);
           xmlhttp.setRequestHeader('Content-Type', 'application/json');
           xmlhttp.send(JSON.stringify(user));
         }
