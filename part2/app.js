@@ -54,5 +54,4 @@ let db;
   }
 })();
 
-// ✅ Export the app
 module.exports = app;
