@@ -124,6 +124,51 @@ let db;
         ((SELECT dog_id FROM Dogs WHERE name = 'Buddy' AND owner_id = (SELECT user_id FROM Users WHERE username = 'alice123')), '2025-06-11 10:00:00', 20, 'Central Park', 'completed'),
         ((SELECT dog_id FROM Dogs WHERE name = 'Cooper' AND owner_id = (SELECT user_id FROM Users WHERE username = 'carol123')), '2025-06-12 16:30:00', 40, 'Greenfield Gardens', 'cancelled')
       `);
+
+            await db.query(`
+  INSERT INTO WalkApplications (request_id, walker_id, status)
+  VALUES
+  (
+    -- Application for accepted walk request (Bella's walk is accepted)
+    (SELECT request_id FROM WalkRequests WHERE status = 'accepted' AND dog_id = (SELECT dog_id FROM Dogs WHERE name = 'Bella') LIMIT 1),
+    (SELECT user_id FROM Users WHERE username = 'davidwalker'),
+    'accepted'
+  ),
+  (
+    -- Application for completed walk request (Buddy's walk is completed)
+    (SELECT request_id FROM WalkRequests WHERE status = 'completed' AND dog_id = (SELECT dog_id FROM Dogs WHERE name = 'Buddy') LIMIT 1),
+    (SELECT user_id FROM Users WHERE username = 'bobwalker'),
+    'accepted'
+  ),
+  (
+    -- Another accepted walk application for completed walk to bobwalker
+    (SELECT request_id FROM WalkRequests WHERE status = 'completed' AND dog_id = (SELECT dog_id FROM Dogs WHERE name = 'Buddy') LIMIT 1),
+    (SELECT user_id FROM Users WHERE username = 'davidwalker'),
+    'accepted'
+  )
+`);
+
+            await db.query(`
+  INSERT INTO WalkRatings (request_id, walker_id, owner_id, rating, comments)
+  VALUES
+  (
+    -- Rating for completed walk (Buddy) by bobwalker, owner alice123
+    (SELECT request_id FROM WalkRequests WHERE status = 'completed' AND dog_id = (SELECT dog_id FROM Dogs WHERE name = 'Buddy') LIMIT 1),
+    (SELECT user_id FROM Users WHERE username = 'bobwalker'),
+    (SELECT user_id FROM Users WHERE username = 'alice123'),
+    5,
+    'Great walk, very punctual!'
+  ),
+  (
+    -- Rating for accepted walk (Bella) by davidwalker, owner carol123
+    (SELECT request_id FROM WalkRequests WHERE status = 'accepted' AND dog_id = (SELECT dog_id FROM Dogs WHERE name = 'Bella') LIMIT 1),
+    (SELECT user_id FROM Users WHERE username = 'davidwalker'),
+    (SELECT user_id FROM Users WHERE username = 'carol123'),
+    4,
+    'Friendly and careful walker.'
+  )
+`);
+
         }
 
 
