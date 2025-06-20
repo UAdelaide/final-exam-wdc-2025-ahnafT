@@ -25,8 +25,13 @@
       <div class="card-body">
         <form @submit.prevent="submitWalkRequest">
           <div class="mb-3">
-            <label class="form-label">Dog ID</label>
-            <input v-model="form.dog_id" type="number" class="form-control" required>
+            <label class="form-label">Dog</label>
+            <select v-model="form.dog_id" class="form-select" required>
+              <option value="" disabled>Select your dog</option>
+              <option v-for="dog in myDogs" :key="dog.dog_id" :value="dog.dog_id">
+                {{ dog.name }}
+              </option>
+            </select>
           </div>
           <div class="mb-3">
             <label class="form-label">Requested Date & Time</label>
@@ -83,6 +88,7 @@
         });
 
         const walks = ref([]);
+        const myDogs = ref([]);
         const message = ref('');
         const error = ref('');
 
@@ -92,6 +98,15 @@
             walks.value = await res.json();
           } catch (err) {
             error.value = 'Failed to load walk requests';
+          }
+        }
+
+        async function loadMyDogs() {
+          try {
+            const res = await fetch('/api/walks/mydogs');
+            myDogs.value = await res.json();
+          } catch (err) {
+            error.value = 'Failed to load your dogs';
           }
         }
 
@@ -123,11 +138,13 @@
 
         onMounted(() => {
           loadWalks();
+          loadMyDogs();
         });
 
         return {
           form,
           walks,
+          myDogs,
           message,
           error,
           submitWalkRequest
@@ -145,7 +162,7 @@
             credentials: 'include'
           });
           if (res.ok) {
-            window.location.href = 'index.html'; // redirect to login
+            window.location.href = 'index.html';
           } else {
             alert('Logout failed');
           }
