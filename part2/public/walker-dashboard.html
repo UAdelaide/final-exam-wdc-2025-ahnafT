@@ -11,10 +11,13 @@
 
 <body class="bg-light">
   <div id="app" class="container py-4">
+    <!-- Logout Button -->
     <div class="d-flex justify-content-end mb-2">
       <button id="logoutBtn" class="btn btn-danger">Logout</button>
     </div>
+
     <h1 class="mb-4 text-success">Walker Dashboard</h1>
+
     <!-- Alert messages -->
     <div v-if="message" class="alert alert-info">{{ message }}</div>
     <div v-if="error" class="alert alert-danger">{{ error }}</div>
@@ -31,7 +34,7 @@
               <strong>Location:</strong> {{ walk.location }}<br>
               <strong>Owner:</strong> {{ walk.owner_name }}
             </p>
-            <button type=button class="btn btn-outline-success" @click="applyToWalk(walk.request_id)">Apply</button>
+            <button type="button" class="btn btn-outline-success" @click="applyToWalk(walk.request_id)">Apply</button>
           </div>
         </div>
       </div>
@@ -47,8 +50,9 @@
         const walks = ref([]);
         const message = ref('');
         const error = ref('');
-        const user = 3;
+        const currentUser = ref(null); // Store current logged-in user info
 
+        // Fetch all open walk requests
         async function loadWalkRequests() {
           try {
             const res = await fetch('/api/walks');
@@ -59,18 +63,38 @@
           }
         }
 
+        // Fetch current logged-in user details
+        async function getCurrentUser() {
+          try {
+            const res = await fetch('/api/users/me', { credentials: 'include' });
+            if (!res.ok) throw new Error('Failed to fetch current user');
+            const data = await res.json();
+            currentUser.value = data;
+          } catch (err) {
+            error.value = err.message;
+          }
+        }
+
+        // Apply to walk request using the current user's ID
         async function applyToWalk(requestId) {
           try {
+            // Ensure we have the current user info
+            if (!currentUser.value) {
+              await getCurrentUser();
+            }
+            const walkerId = currentUser.value.user_id;
             const res = await fetch(`/api/walks/${requestId}/apply`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ walker_id: user })
+              body: JSON.stringify({ walker_id: walkerId })
             });
             const result = await res.json();
 
             if (!res.ok) throw new Error(result.error || 'Application failed');
             message.value = result.message;
             error.value = '';
+
+            // Reload walk requests after successful application
             await loadWalkRequests();
           } catch (err) {
             error.value = err.message;
@@ -78,7 +102,9 @@
           }
         }
 
+        // Initial load of user info and walk requests when component mounts
         onMounted(() => {
+          getCurrentUser();
           loadWalkRequests();
         });
 
@@ -101,7 +127,7 @@
             credentials: 'include'
           });
           if (res.ok) {
-            window.location.href = 'index.html'; // redirect to login
+            window.location.href = 'index.html'; // Redirect to login page after logout
           } else {
             alert('Logout failed');
           }
