@@ -26,8 +26,10 @@
         <form @submit.prevent="submitWalkRequest">
           <div class="mb-3">
             <label class="form-label">Dog</label>
+            <!-- Changed from input type number to select dropdown -->
             <select v-model="form.dog_id" class="form-select" required>
               <option value="" disabled>-- Choose a Dog --</option>
+              <!-- Dynamically populate options from myDogs array -->
               <option v-for="dog in myDogs" :key="dog.dog_id" :value="dog.dog_id">
                 {{ dog.name }}
               </option>
@@ -88,10 +90,11 @@
         });
 
         const walks = ref([]);
-        const myDogs = ref([]);
+        const myDogs = ref([]); // Added reactive variable to hold owner's dogs
         const message = ref('');
         const error = ref('');
 
+        // Load walk requests as before
         async function loadWalks() {
           try {
             const res = await fetch('/api/walks');
@@ -101,15 +104,17 @@
           }
         }
 
+        // New function to load the owner's dogs for the dropdown
         async function loadMyDogs() {
           try {
-            const res = await fetch('/api/walks/mydogs');
+            const res = await fetch('/api/walks/mydogs'); // Endpoint returning owner's dogs
             myDogs.value = await res.json();
           } catch (err) {
             error.value = 'Failed to load your dogs';
           }
         }
 
+        // Submit form as before
         async function submitWalkRequest() {
           try {
             const res = await fetch('/api/walks', {
@@ -136,15 +141,16 @@
           }
         }
 
+        // Call both load functions on component mount
         onMounted(() => {
           loadWalks();
-          loadMyDogs();
+          loadMyDogs(); // Load dogs on page load
         });
 
         return {
           form,
           walks,
-          myDogs,
+          myDogs, // expose myDogs to template
           message,
           error,
           submitWalkRequest
@@ -152,7 +158,7 @@
       }
     }).mount('#app');
 
-    // Logout button logic
+    // Logout button logic remains unchanged
     document.addEventListener('DOMContentLoaded', () => {
       const logoutBtn = document.getElementById('logoutBtn');
       logoutBtn.addEventListener('click', async () => {
