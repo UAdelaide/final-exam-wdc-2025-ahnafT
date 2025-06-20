@@ -14,25 +14,24 @@ app.use(cookieParser());
 let db;
 
 (async () => {
-  try {
-    const connection = await mysql.createConnection({
-      host: 'localhost',
-      user: 'root',
-      password: ''
-    });
+    try {
+        const connection = await mysql.createConnection({
+            host: 'localhost',
+            user: 'root',
+            password: ''
+        });
 
-    await connection.query('CREATE DATABASE IF NOT EXISTS DogWalkService');
-    await connection.end();
+        await connection.query('CREATE DATABASE IF NOT EXISTS DogWalkService');
+        await connection.end();
 
-    db = await mysql.createConnection({
-      host: 'localhost',
-      user: 'root',
-      password: '',
-      database: 'DogWalkService'
-    });
+        db = await mysql.createConnection({
+            host: 'localhost',
+            user: 'root',
+            password: '',
+            database: 'DogWalkService'
+        });
 
-    // Create tables
-    await db.execute(`
+        await db.execute(
       CREATE TABLE IF NOT EXISTS Users (
         user_id INT AUTO_INCREMENT PRIMARY KEY,
         username VARCHAR(50) UNIQUE NOT NULL,
@@ -41,9 +40,9 @@ let db;
         role ENUM('owner', 'walker') NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
-    `);
+    );
 
-    await db.execute(`
+        await db.execute(
       CREATE TABLE IF NOT EXISTS Dogs (
         dog_id INT AUTO_INCREMENT PRIMARY KEY,
         owner_id INT NOT NULL,
@@ -51,9 +50,9 @@ let db;
         size ENUM('small', 'medium', 'large') NOT NULL,
         FOREIGN KEY (owner_id) REFERENCES Users(user_id)
       )
-    `);
+    );
 
-    await db.execute(`
+        await db.execute(
       CREATE TABLE IF NOT EXISTS WalkRequests (
         request_id INT AUTO_INCREMENT PRIMARY KEY,
         dog_id INT NOT NULL,
@@ -64,9 +63,9 @@ let db;
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (dog_id) REFERENCES Dogs(dog_id)
       )
-    `);
+    );
 
-    await db.execute(`
+        await db.execute(
       CREATE TABLE IF NOT EXISTS WalkRatings (
         rating_id INT AUTO_INCREMENT PRIMARY KEY,
         request_id INT NOT NULL,
@@ -80,9 +79,9 @@ let db;
         FOREIGN KEY (owner_id) REFERENCES Users(user_id),
         CONSTRAINT unique_rating_per_walk UNIQUE (request_id)
       )
-    `);
+    );
 
-    await db.execute(`
+        await db.execute(
       CREATE TABLE IF NOT EXISTS WalkApplications (
         application_id INT AUTO_INCREMENT PRIMARY KEY,
         request_id INT NOT NULL,
@@ -93,21 +92,20 @@ let db;
         FOREIGN KEY (walker_id) REFERENCES Users(user_id),
         CONSTRAINT unique_application UNIQUE (request_id, walker_id)
       )
-    `);
+    );
 
-    // Insert test data if not already there
-    const [users] = await db.query('SELECT COUNT(*) AS count FROM Users');
-    if (users[0].count === 0) {
-      await db.query(`
+        const [users] = await db.query('SELECT COUNT(*) AS count FROM Users');
+        if (users[0].count === 0) {
+            await db.query(
         INSERT INTO Users (username, email, password_hash, role) VALUES
         ('alice123', 'alice@example.com', 'hashed123', 'owner'),
         ('bobwalker', 'bob@example.com', 'hashed456', 'walker'),
         ('carol123', 'carol@example.com', 'hashed789', 'owner'),
         ('davidwalker', 'david@example.com', 'hashed999', 'walker'),
         ('emily123', 'emily@example.com', 'hashed321', 'owner')
-      `);
+      );
 
-      await db.query(`
+            await db.query(
         INSERT INTO Dogs (name, size, owner_id)
         VALUES
         ('Max', 'medium', (SELECT user_id FROM Users WHERE username = 'alice123')),
@@ -115,9 +113,9 @@ let db;
         ('Rocky', 'large', (SELECT user_id FROM Users WHERE username = 'emily123')),
         ('Buddy', 'small', (SELECT user_id FROM Users WHERE username = 'alice123')),
         ('Cooper', 'medium', (SELECT user_id FROM Users WHERE username = 'carol123'))
-      `);
+      );
 
-      await db.query(`
+            await db.query(
         INSERT INTO WalkRequests (dog_id, requested_time, duration_minutes, location, status)
         VALUES
         ((SELECT dog_id FROM Dogs WHERE name = 'Max' AND owner_id = (SELECT user_id FROM Users WHERE username = 'alice123')), '2025-06-10 08:00:00', 30, 'Parklands', 'open'),
@@ -125,27 +123,26 @@ let db;
         ((SELECT dog_id FROM Dogs WHERE name = 'Rocky' AND owner_id = (SELECT user_id FROM Users WHERE username = 'emily123')), '2025-06-11 07:15:00', 60, 'Riverwalk Trail', 'open'),
         ((SELECT dog_id FROM Dogs WHERE name = 'Buddy' AND owner_id = (SELECT user_id FROM Users WHERE username = 'alice123')), '2025-06-11 10:00:00', 20, 'Central Park', 'completed'),
         ((SELECT dog_id FROM Dogs WHERE name = 'Cooper' AND owner_id = (SELECT user_id FROM Users WHERE username = 'carol123')), '2025-06-12 16:30:00', 40, 'Greenfield Gardens', 'cancelled')
-      `);
-    }
+      );
+        }
 
-    // --- API ROUTES ---
 
-    app.get('/api/dogs', async (req, res) => {
-      try {
-        const [dogs] = await db.query(`
+        app.get('/api/dogs', async (req, res) => {
+            try {
+                const [dogs] = await db.query(
           SELECT Dogs.name AS dog_name, Dogs.size, Users.username AS owner_username
           FROM Dogs
           JOIN Users ON Dogs.owner_id = Users.user_id
-        `);
-        res.json(dogs);
-      } catch (err) {
-        res.status(500).json({ error: 'Failed to fetch dogs' });
-      }
-    });
+        );
+                res.json(dogs);
+            } catch (err) {
+                res.status(500).json({ error: 'Failed to fetch dogs' });
+            }
+        });
 
-    app.get('/api/walkrequests/open', async (req, res) => {
-      try {
-        const [requests] = await db.query(`
+        app.get('/api/walkrequests/open', async (req, res) => {
+            try {
+                const [requests] = await db.query(
           SELECT
             WalkRequests.request_id,
             Dogs.name AS dog_name,
@@ -157,16 +154,16 @@ let db;
           JOIN Dogs ON WalkRequests.dog_id = Dogs.dog_id
           JOIN Users ON Dogs.owner_id = Users.user_id
           WHERE WalkRequests.status = 'open'
-        `);
-        res.json(requests);
-      } catch (err) {
-        res.status(500).json({ error: 'Failed to fetch open walk requests' });
-      }
-    });
+        );
+                res.json(requests);
+            } catch (err) {
+                res.status(500).json({ error: 'Failed to fetch open walk requests' });
+            }
+        });
 
-    app.get('/api/walkers/summary', async (req, res) => {
-      try {
-        const [summary] = await db.query(`
+        app.get('/api/walkers/summary', async (req, res) => {
+            try {
+                const [summary] = await db.query(
           SELECT
             u.username AS walker_username,
             COUNT(wr.rating_id) AS total_ratings,
@@ -180,16 +177,16 @@ let db;
           LEFT JOIN WalkRatings wr ON wr.walker_id = u.user_id
           WHERE u.role = 'walker'
           GROUP BY u.user_id
-        `);
-        res.json(summary);
-      } catch (err) {
-        res.status(500).json({ error: 'Failed to fetch walker summary' });
-      }
-    });
+        );
+                res.json(summary);
+            } catch (err) {
+                res.status(500).json({ error: 'Failed to fetch walker summary' });
+            }
+        });
 
-  } catch (err) {
-    console.error('Database setup error:', err);
-  }
+    } catch (err) {
+        console.error('Database setup error:', err);
+    }
 })();
 
 app.use(express.static(path.join(__dirname, 'public')));
