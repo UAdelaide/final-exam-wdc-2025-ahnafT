@@ -1,8 +1,29 @@
 body {
-  padding: 50px;
-  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+  background-color: #222;
+  color: #444;
+  font-family: cursive;
+  text-align: center;
+  padding: 40px;
 }
 
-a {
-  color: #00B7FF;
+.dog-card {
+  border: dotted 3px yellow;
+  padding: 20px;
+  margin: 20px auto;
+  width: 50%;
+}
+
+.label {
+  font-size: 1.2em;
+  color: limegreen;
+}
+
+button {
+  padding: 20px;
+  background-color: pink;
+  color: pink; /* Text matches background */
+  font-size: 1.1em;
+  border-radius: 25px;
+  border: none;
+  cursor: crosshair; /* Confusing cursor */
 }
