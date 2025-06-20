@@ -12,22 +12,26 @@
 <body class="bg-light">
 
   <div id="app" class="container py-5">
+    <!-- Centered the heading by adding 'text-center' class -->
     <h1 class="mb-4 text-primary text-center">{{ message }}</h1>
 
-    <!-- Login Form -->
+    <!-- Added Login Form centered with no background/borders -->
     <div class="d-flex justify-content-center">
       <div class="card p-4 mb-4"
         style="max-width: 400px; width: 100%; background-color: transparent; border: none; box-shadow: none;">
         <h3 class="mb-3 text-center">Login</h3>
         <form @submit.prevent="login">
+          <!-- Username input bound with v-model -->
           <div class="mb-3">
             <label for="username" class="form-label">Username</label>
             <input type="text" id="username" v-model="username" class="form-control" required />
           </div>
+          <!-- Password input bound with v-model -->
           <div class="mb-3">
             <label for="password" class="form-label">Password</label>
             <input type="password" id="password" v-model="password" class="form-control" required />
           </div>
+          <!-- Submit button triggers login() method -->
           <button type="submit" class="btn btn-primary w-100">Login</button>
         </form>
       </div>
@@ -40,12 +44,14 @@
       data() {
         return {
           message: 'Welcome to the Dog Walking Service!',
+          // Added username and password data properties for login form binding
           username: '',
           password: ''
         };
       },
       methods: {
         login() {
+          // Prepare user credentials to send in POST request
           const user = {
             username: this.username,
             password: this.password
@@ -57,6 +63,7 @@
               if (xmlhttp.status === 200) {
                 try {
                   const response = JSON.parse(xmlhttp.responseText);
+                  // Redirect based on user role from server response
                   if (response.role === 'owner') {
                     window.location.href = 'owner-dashboard.html';
                   } else if (response.role === 'walker') {
@@ -68,11 +75,13 @@
                   alert('Login failed: invalid server response.');
                 }
               } else {
+                // Alert on failed login (invalid credentials or server error)
                 alert('Login failed: Invalid username or password.');
               }
             }
           };
 
+          // Make POST request to backend login API
           xmlhttp.open('POST', '/api/users/login', true);
           xmlhttp.setRequestHeader('Content-Type', 'application/json');
           xmlhttp.send(JSON.stringify(user));
